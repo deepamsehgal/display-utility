@@ -22,10 +22,7 @@ public:
     bool Refresh(Display *display, Window window);
     void Release();
 
-    OutputResolution * GetResolutionUsingModeId(const RRMode modeId, const Rotation rotation);
-
     bool TryGetOutput(const unsigned int outputIndex, RROutput *output);
-    bool TryGetCrtc(const unsigned int crtcIndex, RRCrtc *crtc);
     XRROutputInfo *GetOutputInfo(Display *display, const RROutput output_id);
     XRRScreenResources *get();
 

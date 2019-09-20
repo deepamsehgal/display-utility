@@ -132,41 +132,6 @@ std::unique_ptr<OutputResolution> DisplayUtilityX11::GetCurrentResolution(RROutp
     return currentResolution;
 }
 
-std::set<OutputResolution> DisplayUtilityX11::GetResolutions(RROutput rROutput)
-{
-    std::set<OutputResolution> resolutionsSet;
-    resources_.Refresh(display_, root_);
-    // Impose a minimum size of 640x480, since anything smaller
-    // doesn't seem very useful.
-    OutputResolution *minimumDesktopResolution = new OutputResolution(640, 480, 0L);
-    XRROutputInfo *outputInfo = resources_.GetOutputInfo(display_, rROutput);
-    if (outputInfo != nullptr && outputInfo->crtc)
-    {
-        XRRCrtcInfo *crtc;
-        crtc = XRRGetCrtcInfo(display_, resources_.get(), outputInfo->crtc);
-
-        if (!crtc)
-        {
-            std::cout << "could not get the crtc info" << std::endl;
-            return resolutionsSet;
-        }
-        XRRFreeCrtcInfo(crtc);
-        for (int i = 0; i < outputInfo->nmode; i++)
-        {
-            OutputResolution *resolution = resources_.GetResolutionUsingModeId(outputInfo->modes[i], crtc->rotation);
-            if (resolution != nullptr && !(*resolution < *minimumDesktopResolution))
-            {
-                resolutionsSet.insert(*resolution);
-            }
-            delete resolution;
-        }
-    }
-    delete minimumDesktopResolution;
-
-    XRRFreeOutputInfo(outputInfo);
-    return resolutionsSet;
-}
-
 std::string DisplayUtilityX11::GetOutputName(RROutput rROutput)
 {
     std::string outputName;
@@ -185,7 +150,22 @@ std::string DisplayUtilityX11::GetOutputName(RROutput rROutput)
 
 RROutput DisplayUtilityX11::GetPrimaryRROutput()
 {
-    return XRRGetOutputPrimary(display_, root_);
+    RROutput primaryRROutput = XRRGetOutputPrimary(display_, root_);
+    
+    // When primary monitor is not set, primaryRROutput is set to 0
+    if (primaryRROutput == 0) {
+        unsigned int numberOfOutputs = 0;
+        RROutput *connectedOutputs = nullptr;
+        // If primary monitor is not set, but monitors are connected, first one is assumed as primary
+        if (this->TryGetConnectedOutputs(&numberOfOutputs, &connectedOutputs))
+        {
+            if (numberOfOutputs > 0) {
+                primaryRROutput = connectedOutputs[0];
+            }
+        }
+    }
+
+    return primaryRROutput;
 }
 
 } // namespace remoting

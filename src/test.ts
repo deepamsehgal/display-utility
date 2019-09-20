@@ -1,8 +1,4 @@
-import { displayUtility, lockUtility } from './index';
-
-// tslint:disable-next-line:no-console
-console.log(displayUtility.getConnectedOutputs());
-// lockUtility.lockScreen();
+import { displayUtility } from './index';
 
 // tslint:disable-next-line:no-console
 console.log(displayUtility.getPrimaryRROutput());
@@ -10,3 +6,6 @@ console.log(displayUtility.getPrimaryRROutput());
 //     width: 1440,
 //     height: 900
 // });
+
+// tslint:disable-next-line: no-console
+console.log(displayUtility.getOutputName(33));

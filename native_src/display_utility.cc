@@ -3,32 +3,6 @@
 #include "../headers/display_utility_x11.h"
 using namespace remoting;
 
-Napi::Array GetConnectedOutputs(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    Napi::Array connectedOutputArray;
-
-    std::unique_ptr<DisplayUtilityX11> desktopInfo = DisplayUtilityX11::Create();
-    unsigned int numberOfOutputs = 0;
-    RROutput *connectedOutputs = nullptr;
-    if (desktopInfo->TryGetConnectedOutputs(&numberOfOutputs, &connectedOutputs))
-    {
-        if (connectedOutputs != nullptr)
-        {
-            std::cout << "There are " << numberOfOutputs << " outputs connected to this desktop." << std::endl;
-            connectedOutputArray = Napi::Array::New(env);
-            for (unsigned int i = 0; i < numberOfOutputs; i += 1)
-            {
-                connectedOutputArray.Set(i, Napi::Number::New(env, connectedOutputs[i]));
-            }
-            delete[] connectedOutputs;
-        }
-        return connectedOutputArray;
-    }
-    Napi::Error::New(env, "Could not get the number of outputs of the display. Please try again.");
-    return connectedOutputArray;
-}
-
 Napi::String GetOutputName(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -87,42 +61,6 @@ Napi::Object GetCurrentResolution(const Napi::CallbackInfo &info)
     return currentResolution;
 }
 
-Napi::Array GetResolutions(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    Napi::Array resolutionArray;
-
-    if (info.Length() < 1)
-    {
-        Napi::TypeError::New(env, "Wrong number of arguments").ThrowAsJavaScriptException();
-        return resolutionArray;
-    }
-
-    if (!info[0].IsNumber())
-    {
-        Napi::TypeError::New(env, "Wrong arguments").ThrowAsJavaScriptException();
-        return resolutionArray;
-    }
-
-    unsigned int rROutput = info[0].As<Napi::Number>().Int32Value();
-    std::unique_ptr<DisplayUtilityX11> desktopInfo = DisplayUtilityX11::Create();
-    std::set<OutputResolution> resolutionsSet = desktopInfo->GetResolutions(rROutput);
-    if (resolutionsSet.size() > 0)
-    {
-        resolutionArray = Napi::Array::New(env);
-    }
-    int i = 0;
-    for (const OutputResolution &resolution : resolutionsSet)
-    {
-        std::cout << resolution.modeId() << " : " << resolution.width() << " x " << resolution.height() << std::endl;
-        Napi::Object currentResolution = Napi::Object::New(env);
-        currentResolution.Set(Napi::String::New(env, "width"), Napi::Number::New(env, resolution.width()));
-        currentResolution.Set(Napi::String::New(env, "height"), Napi::Number::New(env, resolution.height()));
-        resolutionArray.Set(i++, currentResolution);
-    }
-    return resolutionArray;
-}
-
 void SetResolution(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -153,58 +91,6 @@ void SetResolution(const Napi::CallbackInfo &info)
     return;
 }
 
-void MakeScreenBlank(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    std::unique_ptr<DisplayUtilityX11> desktopInfo = DisplayUtilityX11::Create();
-    unsigned int numberOfOutputs = 0;
-    RROutput *connectedOutputs = nullptr;
-    if (desktopInfo->TryGetConnectedOutputs(&numberOfOutputs, &connectedOutputs))
-    {
-        if (connectedOutputs != nullptr)
-        {
-            std::string makeScreenBlankCommand = "xrandr";
-            for (unsigned int i = 0; i < numberOfOutputs; i++)
-            {
-                makeScreenBlankCommand += " --output " + desktopInfo->GetOutputName(*connectedOutputs) + " --brightness 0";
-                connectedOutputs++;
-            }
-            int returnValue = system(makeScreenBlankCommand.c_str());
-            std::cout << "The value returned by command " << makeScreenBlankCommand << " was: " << returnValue << std::endl;
-            return;
-        }
-    }
-    Napi::Error::New(env, "Could not make the screen blank. Please try again.");
-    return;
-}
-
-void ReverseBlankScreen(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    std::unique_ptr<DisplayUtilityX11> desktopInfo = DisplayUtilityX11::Create();
-    unsigned int numberOfOutputs = 0;
-    RROutput *connectedOutputs = nullptr;
-    if (desktopInfo->TryGetConnectedOutputs(&numberOfOutputs, &connectedOutputs))
-    {
-        if (connectedOutputs != nullptr)
-        {
-            std::string reverseBlankScreenCommand = "xrandr";
-            for (unsigned int i = 0; i < numberOfOutputs; i++)
-            {
-                reverseBlankScreenCommand += " --output " + desktopInfo->GetOutputName(*connectedOutputs) + " --brightness 1";
-                connectedOutputs++;
-            }
-            int returnValue = system(reverseBlankScreenCommand.c_str());
-            std::cout << "The value returned by command " << reverseBlankScreenCommand << " was: " << returnValue << std::endl;
-            return;
-        }
-    }
-    Napi::Error::New(env, "Could not reverse the screen blank. Please try again.");
-    return;
-}
-
 Napi::Number GetPrimaryRROutput(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -216,13 +102,9 @@ Napi::Number GetPrimaryRROutput(const Napi::CallbackInfo &info)
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
-    exports.Set(Napi::String::New(env, "getConnectedOutputs"), Napi::Function::New(env, GetConnectedOutputs));
     exports.Set(Napi::String::New(env, "getOutputName"), Napi::Function::New(env, GetOutputName));
     exports.Set(Napi::String::New(env, "getCurrentResolution"), Napi::Function::New(env, GetCurrentResolution));
-    exports.Set(Napi::String::New(env, "getResolutions"), Napi::Function::New(env, GetResolutions));
     exports.Set(Napi::String::New(env, "setResolution"), Napi::Function::New(env, SetResolution));
-    exports.Set(Napi::String::New(env, "makeScreenBlank"), Napi::Function::New(env, MakeScreenBlank));
-    exports.Set(Napi::String::New(env, "reverseBlankScreen"), Napi::Function::New(env, ReverseBlankScreen));
     exports.Set(Napi::String::New(env, "getPrimaryRROutput"), Napi::Function::New(env, GetPrimaryRROutput));
     return exports;
 }
