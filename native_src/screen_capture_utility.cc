@@ -87,6 +87,7 @@ void ScreenCaptureUtility::GetNextFrame(const Napi::CallbackInfo &info)
         uint8_t *nextFrame;
         nextFrame = this->_encoder->GetNextFrame(&frame_size, getIFrame);
         cb.Call(env.Global(), {Napi::ArrayBuffer::New(info.Env(), nextFrame, frame_size)});
+        delete nextFrame;
     }
     catch (const char *message)
     {

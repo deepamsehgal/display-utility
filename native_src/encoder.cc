@@ -165,26 +165,48 @@ uint8_t *Encoder::GetNextFrame(int *frame_size, bool getIFrame)
     int luma_size = W * H;
     int chroma_size = luma_size / 4;
 
-    _inputPic.img.plane[0] = _yuvData;
-    _inputPic.img.plane[1] = _yuvData + luma_size;
-    _inputPic.img.plane[2] = _yuvData + luma_size + chroma_size;
-    _inputPic.i_pts = _i_frame_counter;
+    // _inputPic.colorSpace = X265_CSP_I420;
+    _inputPic.planes[0] = _yuvData;
+    _inputPic.planes[1] = _yuvData + luma_size;
+    _inputPic.planes[2] = _yuvData + luma_size + chroma_size;
+    _inputPic.stride[0] = W;
+    _inputPic.stride[1] = W/2;
+    _inputPic.stride[2] = W/2;
+    _inputPic.pts = _i_frame_counter;
     if (getIFrame) {
         // Set to force an iFrame
-        _inputPic.i_type = X264_TYPE_IDR;
+        _inputPic.sliceType = X265_TYPE_IDR;
     } else {
         // Set to get back to normal encodings
-        _inputPic.i_type = X264_TYPE_AUTO;
+        _inputPic.sliceType = X265_TYPE_AUTO;
     }
     _i_frame_counter++;
 
-    int i_frame_size = 0;
+    int returnValue = 0;
+    uint8_t* returnBuffer = nullptr;
     try
     {
-        i_frame_size = x264_encoder_encode(_x264Encoder, &_nal, &_noOfNal, &_inputPic, &_outputPic);
+        returnValue = x265_encoder_encode(_x264Encoder, &_nal, &_noOfNal, &_inputPic, &_outputPic);
         // std::cout<<i_frame_size;
-        *frame_size = i_frame_size;
-        if (i_frame_size <= 0)
+        int size = 0;
+        std::cout<< _noOfNal << std::endl;
+        for(int i = 0; i < _noOfNal; i++) {
+            size += _nal[i].sizeBytes;
+//            std::cout<< _nal[i].sizeBytes << std::endl;
+        }
+        *frame_size = size;
+        
+        returnBuffer = new uint8_t[size];
+        for(int i = 0, k = 0; i < _noOfNal; i++) {
+            memcpy(returnBuffer + k, _nal[i].payload, _nal[i].sizeBytes);
+            k += _nal[i].sizeBytes;
+            // for(int j = 0; j < _nal[i].sizeBytes; j++, k++) {
+            //     returnBuffer[k] = _nal[i].payload[j];
+            // }
+        }
+
+
+        if (returnValue <= 0)
         {
             throw "No NAL is produced out of encoder.";
         }
@@ -194,18 +216,19 @@ uint8_t *Encoder::GetNextFrame(int *frame_size, bool getIFrame)
         throw "ERROR : Encoding failed. " + std::string(msg);
     }
 
-    return _nal->p_payload;
+    return returnBuffer;
 }
 
-x264_t *Encoder::OpenEncoder(int width, int height)
+x265_encoder *Encoder::OpenEncoder(int width, int height)
 {
-    x264_param_t x264Params;
-    x264_t *h;
+    x265_param x264Params;
+    x265_encoder *h;
 
-    int returnValue = x264_param_default_preset(&x264Params, x264_preset_names[2], x264_tune_names[7]);
+    x265_param_default(&x264Params);
+    int returnValue = x265_param_default_preset(&x264Params, x265_preset_names[2], x265_tune_names[3]);
     if (returnValue == 0)
     {
-        std::cout << x264_preset_names[2] << " preset is applied and " << x264_tune_names[7] << " tune is applied." << std::endl;
+        std::cout << x265_preset_names[2] << " preset is applied and " << x265_tune_names[3] << " tune is applied." << std::endl;
     }
     else
     {
@@ -214,37 +237,47 @@ x264_t *Encoder::OpenEncoder(int width, int height)
 
     /* Configure non-default params */
     // x264Params.i_bitdepth = 8;
-    x264Params.i_csp = X264_CSP_I420;
+    x264Params.internalCsp = X265_CSP_I420;
+    
     // Width and height should be even for encoder. Setting to next even number
-    x264Params.i_width = width + (width % 2);
-    x264Params.i_height = height + (height % 2);
+    x264Params.sourceWidth = width + (width % 2);
+    x264Params.sourceHeight = height + (height % 2);
     // x264Params.b_vfr_input = 0;
-    x264Params.b_repeat_headers = 1;
-    x264Params.b_annexb = 1;
+    x264Params.bRepeatHeaders = 1;
+    x264Params.bAnnexB = 1;
 
-    x264_param_apply_fastfirstpass(&x264Params);
+    x264Params.fpsNum = 25;
+    x264Params.fpsDenom = 1;
 
-    returnValue = x264_param_apply_profile(&x264Params, x264_profile_names[0]);
+    // x264_param_apply_fastfirstpass(&x264Params);
+
+    returnValue = x265_param_apply_profile(&x264Params, x265_profile_names[0]);
     if (returnValue == 0)
     {
-        std::cout << x264_profile_names[0] << " profile is applied." << std::endl;
+        std::cout << x265_profile_names[0] << " profile is applied." << std::endl;
     }
     else
     {
         throw "Failed to apply profile.";
     }
 
-    returnValue = x264_picture_alloc(&_inputPic, x264Params.i_csp, x264Params.i_width, x264Params.i_height);
-    if (returnValue == 0)
-    {
-        std::cout << "x264_picture_alloc succeeded." << std::endl;
-    }
-    else
-    {
-        throw "x264_picture_alloc Failed.";
-    }
+    x265_picture_init(&x264Params, &_inputPic);
+    std::cout << "color space of input picture " << _inputPic.colorSpace << std::endl;
+    // _inputPic.colorSpace = X265_CSP_I420;
+    // std::cout << "color space of input picture" << _inputPic.colorSpace;
+    // if (_inputPic != NULL)
+    // {
+    //     std::cout << "x264_picture_alloc succeeded." << std::endl;
+    // }
+    // else
+    // {
+    //     throw "x264_picture_alloc Failed.";
+    // }
 
-    h = x264_encoder_open(&x264Params);
+    h = x265_encoder_open(&x264Params);
+    if(h==NULL){
+		printf("x265_encoder_open err\n");
+	}
 
     return h;
 }
@@ -254,8 +287,8 @@ void Encoder::CleanUp()
     std::cout << "Cleanup invoked";
     delete this->_screenCapturer;
     // delete[] this->_yuvData;  // Not necessary as x264_picture_clean clears yuvData
-    x264_picture_clean(&this->_inputPic);
-    x264_encoder_close(this->_x264Encoder);
+    x265_picture_free(&this->_inputPic);
+    x265_encoder_close(this->_x264Encoder);
     // sws_freeContext(_swsConverter);
 }
 

@@ -20,34 +20,36 @@ console.log(displayUtility.getAllCurrentResolutionsWithOffset());
 
 async function testScreenCapturer(): Promise<void> {
     try {
-        fs.writeFileSync('/tmp/output.h264', '');
+        fs.writeFileSync('/tmp/output.h265', '');
         screenCaptureUtility.init(true, 65);
         let numberOfFrames: number = 100;
         // tslint:disable-next-line: no-console
         console.time('fps');
-        console.timeLog('fps');
+            // console.timeLog('fps');
         while (numberOfFrames !== 0) {
             screenCaptureUtility.getNextFrame((frame: ArrayBuffer) => {
-                writeToFile(frame);
+                if (frame !== null || frame !== undefined) {
+                    writeToFile(frame);
+                }
             });
             numberOfFrames = numberOfFrames - 1;
         }
         // tslint:disable-next-line: no-console
         console.timeEnd('fps');
 
-        screenCaptureUtility.init(false);
-        numberOfFrames = 100;
-        // tslint:disable-next-line: no-console
-        console.time('fps');
-        console.timeLog('fps');
-        while (numberOfFrames !== 0) {
-            screenCaptureUtility.getNextFrame((frame: ArrayBuffer) => {
-                writeToFile(frame);
-            });
-            numberOfFrames = numberOfFrames - 1;
-        }
-        // tslint:disable-next-line: no-console
-        console.timeEnd('fps');
+        // screenCaptureUtility.init(false);
+        // numberOfFrames = 100;
+        // // tslint:disable-next-line: no-console
+        // console.time('fps');
+        // console.timeLog('fps');
+        // while (numberOfFrames !== 0) {
+        //     screenCaptureUtility.getNextFrame((frame: ArrayBuffer) => {
+        //         writeToFile(frame);
+        //     });
+        //     numberOfFrames = numberOfFrames - 1;
+        // }
+        // // tslint:disable-next-line: no-console
+        // console.timeEnd('fps');
     } catch (err) {
         // tslint:disable-next-line: no-console
         console.log(err);
@@ -55,8 +57,8 @@ async function testScreenCapturer(): Promise<void> {
 }
 
 function writeToFile(input: ArrayBuffer): void {
-    fs.appendFileSync('/tmp/output.h264', new Buffer(input));
+    fs.appendFileSync('/tmp/output.h265', new Buffer(input));
 }
 
 // tslint:disable-next-line: no-floating-promises
-// testScreenCapturer();
+testScreenCapturer();
