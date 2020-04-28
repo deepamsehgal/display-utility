@@ -71,6 +71,6 @@
     "binding.gyp",
     "release/index.js",
     "release/index.d.ts",
-    "x264"
+    "x265"
   ]
 }
