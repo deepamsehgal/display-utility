@@ -16,4 +16,5 @@ void GetNextFrameWorker::Execute()
 void GetNextFrameWorker::OnOK()
 {
     Callback().Call(Env().Global(), {Napi::ArrayBuffer::New(Env(), _next_frame, _frame_size)});
+    delete _next_frame;
 }

@@ -1,7 +1,7 @@
 {
   "variables": {
-    # x264_root as relative path to the module root
-    "x264_root%": "<(module_root_dir)/x264"
+    # x265_root as relative path to the module root
+    "x265_root%": "<(module_root_dir)/x265"
   },
   "targets": [
     { 
@@ -17,7 +17,7 @@
           "-lXtst", # provided by libxtst-dev
           "-lXdamage",
           "-lXfixes",
-          "<@(x264_root)/lib/libx264.a" # static library exported with the package
+          "<@(x265_root)/lib/libx265.a" # static library exported with the package
         ]
       },
       "target_name": "display-utility",

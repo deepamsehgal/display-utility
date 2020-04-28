@@ -16,12 +16,14 @@ void Encoder::Init(bool singleMonitorCapture, RROutput rROutput)
     {
         std::cout << "Deleting stuff for reinitialising..";
         this->CleanUp();
-    } else {
+    }
+    else
+    {
         // Initialise only in the first time
         _display = XOpenDisplay(NULL);
         _window = DefaultRootWindow(_display);
     }
-    
+
     try
     {
         if (singleMonitorCapture)
@@ -63,8 +65,8 @@ void Encoder::Init(bool singleMonitorCapture, RROutput rROutput)
 
     try
     {
-        // Initialise x264 encoder
-        _x264Encoder = OpenEncoder(_width, _height);
+        // Initialise x265 encoder
+        _x265Encoder = OpenEncoder(_width, _height);
     }
     catch (const char *msg)
     {
@@ -140,41 +142,50 @@ uint8_t *Encoder::GetNextFrame(int *frame_size)
     {
         throw "ERROR: ScreenCaptureUtility not initialised before use.";
     }
-    while (1) {
+    while (1)
+    {
         int pendingEvents = 0;
-        if (!_use_xdamage || _force_next_frame) {
+        if (!_use_xdamage || _force_next_frame)
+        {
             // if (_use_xdamage) {
             //     XDamageSubtract(this->_screenCapturer->GetDisplay(), _damage_handle, None, None);
             // }
             _force_next_frame = false;
             return CaptureAndEncode(frame_size);
-        } else {
+        }
+        else
+        {
             pendingEvents = XPending(this->_display);
             bool damage_event_flag = false;
-            for(int i = 0; i < pendingEvents; i++) {
+            for (int i = 0; i < pendingEvents; i++)
+            {
                 XNextEvent(this->_display, &_event);
                 if (_event.type == _damage_event_base + XDamageNotify)
                 {
                     damage_event_flag = true;
                 }
             }
-            if (damage_event_flag) {
+            if (damage_event_flag)
+            {
                 XDamageSubtract(this->_display, _damage_handle, None, _damage_region);
                 int rects_num = 0;
                 XRectangle bounds;
-                XRectangle* rects = XFixesFetchRegionAndBounds(this->_display, _damage_region,
-                                                            &rects_num, &bounds);
+                XRectangle *rects = XFixesFetchRegionAndBounds(this->_display, _damage_region,
+                                                               &rects_num, &bounds);
                 XFree(rects);
-                return CaptureAndEncode(frame_size);    
-            } else {
+                return CaptureAndEncode(frame_size);
+            }
+            else
+            {
                 usleep(30 * 1000);
             }
         }
     }
 }
 
-uint8_t *Encoder::CaptureAndEncode(int *frame_size) {
-    
+uint8_t *Encoder::CaptureAndEncode(int *frame_size)
+{
+
     try
     {
         _screenCapturer->CaptureScreen();
@@ -183,7 +194,7 @@ uint8_t *Encoder::CaptureAndEncode(int *frame_size) {
     {
         throw "ERROR: Screen capture of next frame failed. " + std::string(msg);
     }
-    
+
     try
     {
         Bitmap2Yuv420p_calc2(_yuvData, _rgbData, _width, _height);
@@ -196,28 +207,51 @@ uint8_t *Encoder::CaptureAndEncode(int *frame_size) {
     int luma_size = _width * _height;
     int chroma_size = luma_size / 4;
 
-    _inputPic.img.plane[0] = _yuvData;
-    _inputPic.img.plane[1] = _yuvData + luma_size;
-    _inputPic.img.plane[2] = _yuvData + luma_size + chroma_size;
-    _inputPic.i_pts = _i_frame_counter;
-    if (_next_frame_as_iframe) {
+    _inputPic.planes[0] = _yuvData;
+    _inputPic.planes[1] = _yuvData + luma_size;
+    _inputPic.planes[2] = _yuvData + luma_size + chroma_size;
+    _inputPic.stride[0] = _width;
+    _inputPic.stride[1] = _width/2;
+    _inputPic.stride[2] = _width/2;
+    _inputPic.pts = _i_frame_counter;
+    if (_next_frame_as_iframe)
+    {
         // Set to force an iFrame
-        std::cout<<"Sending an iFrame from encoder";
-        _inputPic.i_type = X264_TYPE_IDR;
+        std::cout << "Sending an iFrame from encoder";
+        _inputPic.sliceType = X265_TYPE_IDR;
         _next_frame_as_iframe = false;
-    } else {
+    }
+    else
+    {
         // Set to get back to normal encodings
-        _inputPic.i_type = X264_TYPE_AUTO;
+        _inputPic.sliceType = X265_TYPE_AUTO;
     }
     _i_frame_counter++;
 
-    int i_frame_size = 0;
+    int encodeReturnValue = 0;
+    uint8_t *encodedBuffer = nullptr;
     try
     {
-        i_frame_size = x264_encoder_encode(_x264Encoder, &_nal, &_noOfNal, &_inputPic, &_outputPic);
-        *frame_size = i_frame_size;
+        encodeReturnValue = x265_encoder_encode(_x265Encoder, &_nal, &_noOfNal, &_inputPic, &_outputPic);
 
-        if (i_frame_size <= 0)
+        std::cout << _noOfNal << std::endl;
+        int size = 0;
+        for (uint32_t i = 0; i < _noOfNal; i++)
+        {
+            size += _nal[i].sizeBytes;
+        }
+
+        *frame_size = size;
+        if(size > 0)
+            encodedBuffer = new uint8_t[size];
+        for (uint32_t i = 0, k = 0; i < _noOfNal; i++)
+        {
+            memcpy(encodedBuffer + k, _nal[i].payload, _nal[i].sizeBytes);
+            k += _nal[i].sizeBytes;
+        }
+        // std::cout<<i_frame_size;
+
+        if (encodeReturnValue <= 0)
         {
             throw "No NAL is produced out of encoder.";
         }
@@ -227,18 +261,20 @@ uint8_t *Encoder::CaptureAndEncode(int *frame_size) {
         throw "ERROR : Encoding failed. " + std::string(msg);
     }
 
-    return _nal->p_payload;
+    return encodedBuffer;
 }
 
-x264_t *Encoder::OpenEncoder(int width, int height)
+x265_encoder *Encoder::OpenEncoder(int width, int height)
 {
-    x264_param_t x264Params;
-    x264_t *h;
+    x265_param x265Params;
+    x265_encoder *h;
 
-    int returnValue = x264_param_default_preset(&x264Params, x264_preset_names[0], x264_tune_names[7]);
+    x265_param_default(&x265Params);
+
+    int returnValue = x265_param_default_preset(&x265Params, x265_preset_names[2], x265_tune_names[3]);
     if (returnValue == 0)
     {
-        std::cout << x264_preset_names[0] << " preset is applied and " << x264_tune_names[7] << " tune is applied." << std::endl;
+        std::cout << x265_preset_names[2] << " preset is applied and " << x265_tune_names[3] << " tune is applied." << std::endl;
     }
     else
     {
@@ -246,46 +282,38 @@ x264_t *Encoder::OpenEncoder(int width, int height)
     }
 
     /* Configure non-default params */
-    // x264Params.i_bitdepth = 8;
-    x264Params.i_csp = X264_CSP_I420;
+    x265Params.internalCsp = X265_CSP_I420;
     // Width and height should be even for encoder. Setting to next even number
-    x264Params.i_width = width + (width % 2);
-    x264Params.i_height = height + (height % 2);
-    // x264Params.b_vfr_input = 0;
-    x264Params.b_repeat_headers = 1;
-    x264Params.b_annexb = 1;
-    
-    x264Params.i_keyint_max = 5000;
-    // x264Params.i_keyint_min = INT32_MAX;
-    // x264Params.i_avcintra_class
+    x265Params.sourceWidth = width + (width % 2);
+    x265Params.sourceHeight = height + (height % 2);
+    x265Params.bRepeatHeaders = 1;
+    x265Params.bAnnexB = 1;
+    x265Params.fpsNum = 25;
+    x265Params.fpsDenom = 1;
+
+    x265Params.keyframeMax = 5000;
 
     int crfValue = 25;
-    x264Params.rc.f_rf_constant = crfValue;
-    std::cout<<"CRF set as "<<crfValue;
+    x265Params.rc.rfConstant = crfValue;
+    std::cout << "CRF set as " << crfValue << std::endl;
 
-    x264_param_apply_fastfirstpass(&x264Params);
-
-    returnValue = x264_param_apply_profile(&x264Params, x264_profile_names[0]);
+    returnValue = x265_param_apply_profile(&x265Params, x265_profile_names[0]);
     if (returnValue == 0)
     {
-        std::cout << x264_profile_names[0] << " profile is applied." << std::endl;
+        std::cout << x265_profile_names[0] << " profile is applied." << std::endl;
     }
     else
     {
         throw "Failed to apply profile.";
     }
 
-    returnValue = x264_picture_alloc(&_inputPic, x264Params.i_csp, x264Params.i_width, x264Params.i_height);
-    if (returnValue == 0)
-    {
-        std::cout << "x264_picture_alloc succeeded." << std::endl;
-    }
-    else
-    {
-        throw "x264_picture_alloc Failed.";
-    }
+    x265_picture_init(&x265Params, &_inputPic);
 
-    h = x264_encoder_open(&x264Params);
+    h = x265_encoder_open(&x265Params);
+    if (h == NULL)
+    {
+        printf("x265_encoder_open err\n");
+    }
 
     return h;
 }
@@ -297,8 +325,8 @@ void Encoder::CleanUp()
     std::cout << "Cleanup invoked";
     delete this->_screenCapturer;
     // delete[] this->_yuvData;  // Not necessary as x264_picture_clean clears yuvData
-    x264_picture_clean(&this->_inputPic);
-    x264_encoder_close(this->_x264Encoder);
+    x265_picture_free(&this->_inputPic);
+    x265_encoder_close(this->_x265Encoder);
     // sws_freeContext(_swsConverter);
 }
 
@@ -317,7 +345,7 @@ void Encoder::InitXDamage()
 {
     // Check for XDamage extension.
     if (!XDamageQueryExtension(this->_display, &_damage_event_base,
-                                &_damage_error_base))
+                               &_damage_error_base))
     {
         std::cout << "X server does not support XDamage." << std::endl;
         return;
@@ -328,7 +356,7 @@ void Encoder::InitXDamage()
     // properly.
     // Request notifications every time the screen becomes damaged.
     _damage_handle = XDamageCreate(this->_display, this->_window,
-                                    XDamageReportNonEmpty);
+                                   XDamageReportNonEmpty);
     if (!_damage_handle)
     {
         std::cout << "Unable to initialize XDamage." << std::endl;

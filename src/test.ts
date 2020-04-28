@@ -20,23 +20,23 @@ console.log(displayUtility.getAllCurrentResolutionsWithOffset());
 
 async function testScreenCapturer(): Promise<void> {
     try {
-        fs.writeFileSync('/tmp/output.h264', '');
-        screenCaptureUtility.init(true, 65);
-        let numberOfFrames: number = 100;
-        // tslint:disable-next-line: no-console
-        console.time('fps');
-        console.timeLog('fps');
-        while (numberOfFrames !== 0) {
-            screenCaptureUtility.getNextFrame((frame: ArrayBuffer) => {
-                writeToFile(frame);
-            });
-            numberOfFrames = numberOfFrames - 1;
-        }
-        // tslint:disable-next-line: no-console
-        console.timeEnd('fps');
+        fs.writeFileSync('/tmp/output.h265', '');
+        // screenCaptureUtility.init(true, 65);
+        // let numberOfFrames: number = 100;
+        // // tslint:disable-next-line: no-console
+        // console.time('fps');
+        // // console.timeLog('fps');
+        // while (numberOfFrames !== 0) {
+        //     screenCaptureUtility.getNextFrame((frame: ArrayBuffer) => {
+        //         writeToFile(frame);
+        //     });
+        //     numberOfFrames = numberOfFrames - 1;
+        // }
+        // // tslint:disable-next-line: no-console
+        // console.timeEnd('fps');
 
         screenCaptureUtility.init(false);
-        numberOfFrames = 100;
+        let numberOfFrames: number = 100;
         // tslint:disable-next-line: no-console
         console.time('fps');
         console.timeLog('fps');
@@ -55,32 +55,33 @@ async function testScreenCapturer(): Promise<void> {
 }
 
 function writeToFile(input: ArrayBuffer): void {
-    fs.appendFileSync('/tmp/output.h264', new Buffer(input));
+    fs.appendFileSync('/tmp/output.h265', new Buffer(input));
 }
 
 // tslint:disable-next-line: no-floating-promises
 // testScreenCapturer();
 
 function testForceFrame(): void {
-
+    fs.writeFileSync('/tmp/output.h265', '');
     screenCaptureUtility.init(false);
 
-    setInterval(() => {
-        screenCaptureUtility.forceNextFrame();
-    },          1000);
+    // setInterval(() => {
+    //     screenCaptureUtility.forceNextFrame();
+    // },          1000);
 
-    setTimeout(() => {
-        screenCaptureUtility.init(true, 65);
-     },        5000);
+    // setTimeout(() => {
+    //     screenCaptureUtility.init(true, 65);
+    //  },        5000);
     processFrame();
 }
 
 function processFrame(): void {
     screenCaptureUtility.getNextFrame((frame: ArrayBuffer) => {
+        writeToFile(frame);
         // tslint:disable-next-line: no-console
         console.log(`Received ${frame.byteLength}`);
         processFrame();
     });
 }
 
-// testForceFrame();
+testForceFrame();

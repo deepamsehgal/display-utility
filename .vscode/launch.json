@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "preLaunchTask": "build:dev",
-            "program": "/usr/bin/node",
+            "program": "node",
             "args": ["${workspaceRoot}/release/test.js"],
         }
     ]
