@@ -16,6 +16,8 @@ export const displayUtility: INativeDisplayUtility = addon.DisplayUtility;
 // tslint:disable-next-line: no-unsafe-any
 export const screenCaptureUtility: IScreenCaptureUtility = new addon.ScreenCaptureUtility();
 
+// export const decodingUtility: IDecoderUtility = new addon.DecoderUtility();
+
 export const lockUtility: ILockUtility = {
     lockScreen: lockSystem
 };
@@ -134,4 +136,17 @@ interface IScreenCaptureUtility {
      * Force the next frame to be an iframe. Call will also force the next frame and return any waiting getNextFrame callback
      */
     sendNextFrameAsIFrame(): void;
+}
+
+interface IDecoderUtility {
+    /**
+     * Initialises the x265 decoder
+     */
+    init(width: number, height: number): void;
+
+    /**
+     * Returns the decoded frame buffer as a callback
+     */
+    decodeFrame(callback: (nextFrame: ArrayBuffer) => void): void;
+
 }
