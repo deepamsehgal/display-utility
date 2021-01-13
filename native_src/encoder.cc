@@ -8,10 +8,11 @@ Encoder::Encoder()
 {
     _isInitialised = false;
     _use_xdamage = false;
+    _currentCRFValue = -1;
 }
 void Encoder::Init(bool singleMonitorCapture, RROutput rROutput)
 {
-    XInitThreads();
+/*    XInitThreads();
     if (_isInitialised)
     {
         std::cout << "Deleting stuff for reinitialising..";
@@ -21,17 +22,18 @@ void Encoder::Init(bool singleMonitorCapture, RROutput rROutput)
         _display = XOpenDisplay(NULL);
         _window = DefaultRootWindow(_display);
     }
-    
+*/    
     try
     {
-        if (singleMonitorCapture)
+/*        if (singleMonitorCapture)
         {
             _screenCapturer = new SingleScreenCapturer(_display, _window, rROutput);
         }
         else
         {
             _screenCapturer = new MultiScreenCapturer(_display, _window);
-        }
+        }*/
+            _screenCapturer = new TtyConsoleCapturer();
     }
     catch (std::string msg)
     {
@@ -72,7 +74,7 @@ void Encoder::Init(bool singleMonitorCapture, RROutput rROutput)
     }
     // InitializeConverter(_width, _height);
 
-    InitXDamage();
+//    InitXDamage();
 
     _isInitialised = true;
 }
@@ -136,7 +138,8 @@ void Bitmap2Yuv420p_calc2(uint8_t *destination, uint8_t *rgb, size_t width, size
  */
 uint8_t *Encoder::GetNextFrame(int *frame_size)
 {
-    if (!_isInitialised)
+                return CaptureAndEncode(frame_size);    
+/*    if (!_isInitialised)
     {
         throw "ERROR: ScreenCaptureUtility not initialised before use.";
     }
@@ -170,7 +173,7 @@ uint8_t *Encoder::GetNextFrame(int *frame_size)
                 usleep(30 * 1000);
             }
         }
-    }
+    }*/
 }
 
 uint8_t *Encoder::CaptureAndEncode(int *frame_size) {
@@ -258,10 +261,11 @@ x264_t *Encoder::OpenEncoder(int width, int height)
     x264Params.i_keyint_max = 5000;
     // x264Params.i_keyint_min = INT32_MAX;
     // x264Params.i_avcintra_class
-
-    int crfValue = 25;
-    x264Params.rc.f_rf_constant = crfValue;
-    std::cout<<"CRF set as "<<crfValue;
+    if (this->_currentCRFValue == -1) {
+        this->_currentCRFValue = 34; // Default CRF value
+    }
+    x264Params.rc.f_rf_constant = this->_currentCRFValue;
+    std::cout<<"CRF set as "<<this->_currentCRFValue;
 
     x264_param_apply_fastfirstpass(&x264Params);
 
@@ -292,8 +296,8 @@ x264_t *Encoder::OpenEncoder(int width, int height)
 
 void Encoder::CleanUp()
 {
-    if (_damage_handle)
-        XDamageDestroy(this->_display, _damage_handle);
+//    if (_damage_handle)
+//        XDamageDestroy(this->_display, _damage_handle);
     std::cout << "Cleanup invoked";
     delete this->_screenCapturer;
     // delete[] this->_yuvData;  // Not necessary as x264_picture_clean clears yuvData
@@ -311,6 +315,23 @@ void Encoder::SendNextFrameAsIFrame()
 {
     this->_next_frame_as_iframe = true;
     this->_force_next_frame = true;
+}
+
+void Encoder::SetCRFValue(int crfValue)
+{
+    x264_param_t x264Params;
+    x264_encoder_parameters(_x264Encoder, &x264Params);
+    x264Params.rc.f_rf_constant = crfValue;
+    this->_currentCRFValue = crfValue;
+    int returnValue = x264_encoder_reconfig(_x264Encoder, &x264Params);
+    if (returnValue == 0)
+    {
+        std::cout<<"CRF value set as "<<crfValue;
+    } 
+    else 
+    {
+        throw "Reconfigure encoder failed";
+    }
 }
 
 void Encoder::InitXDamage()
@@ -350,7 +371,7 @@ void Encoder::InitXDamage()
 
 Encoder::~Encoder()
 {
-    this->CleanUp();
-    XCloseDisplay(this->_display);
+//    this->CleanUp();
+//    XCloseDisplay(this->_display);
 }
 } // namespace remoting

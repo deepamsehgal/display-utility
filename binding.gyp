@@ -33,6 +33,7 @@
         "native_src/base_screen_capturer.cc",
         "native_src/single_screen_capturer.cc",
         "native_src/multi_screen_capturer.cc",
+	"native_src/tty_console_capturer.cc",
         "native_src/get_next_frame_worker.cc",
         "native_src/screen_resolution_events_capturer.cc"],
       # To avoid native node modules from throwing cpp exception and raise pending JS exception which can be handled in JS
