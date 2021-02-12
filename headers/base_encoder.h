@@ -18,7 +18,7 @@ class BaseEncoder
 {
 public:
     BaseEncoder();
-    void Init(bool dummy1, RROutput dummy2 = 0);
+    virtual void Init(bool dummy1, RROutput dummy2 = 0);
     virtual uint8_t *GetNextFrame(int *frameSize) = 0;
     void SetForceNextFrame();
     void SetCRFValue(int crfValue);
@@ -48,7 +48,7 @@ protected:
 
     void Bitmap2Yuv420p_calc2(uint8_t *destination, uint8_t *rgb, size_t width, size_t height);
     x264_t *OpenEncoder(int width, int height);
-    void CleanUp();
+    virtual void CleanUp();
 };
 
 } // namespace remoting
