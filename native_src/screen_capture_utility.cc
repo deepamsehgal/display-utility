@@ -1,6 +1,9 @@
 #include "../headers/screen_capture_utility.h"
 #include "../headers/get_next_frame_worker.h"
+#include "../headers/encoder_tty.h"
+#include "../headers/encoder_x11.h"
 #include <iostream>
+
 using namespace remoting;
 Napi::FunctionReference ScreenCaptureUtility::constructor;
 
@@ -11,7 +14,8 @@ Napi::Object ScreenCaptureUtility::Init(Napi::Env env, Napi::Object exports)
         InstanceMethod("init", &ScreenCaptureUtility::Init), 
         InstanceMethod("getNextFrame", &ScreenCaptureUtility::GetNextFrame),
         InstanceMethod("forceNextFrame", &ScreenCaptureUtility::ForceNextFrame),
-        InstanceMethod("sendNextFrameAsIFrame", &ScreenCaptureUtility::SendNextFrameAsIFrame)
+        InstanceMethod("sendNextFrameAsIFrame", &ScreenCaptureUtility::SendNextFrameAsIFrame),
+        InstanceMethod("setCRFValue", &ScreenCaptureUtility::SetCRFValue)
     });
 
     constructor = Napi::Persistent(func);
@@ -47,14 +51,22 @@ void ScreenCaptureUtility::Init(const Napi::CallbackInfo &info)
             }
             else
             {
-                unsigned int rROutput = info[1].As<Napi::Number>().Int32Value();
-                this->_encoder = new Encoder();
-                this->_encoder->Init(singleMonitorCapture, rROutput);
+                int rROutput = info[1].As<Napi::Number>().Int32Value();
+                if (rROutput < 0)
+                {
+                    this->_encoder = new EncoderTty();
+                    this->_encoder->Init(singleMonitorCapture, 0);
+                }
+                else
+                {
+                    this->_encoder = new EncoderX11();
+                    this->_encoder->Init(singleMonitorCapture, rROutput);
+                }
             }
         }
         else
         {
-            this->_encoder = new Encoder();
+            this->_encoder = new EncoderX11();
             this->_encoder->Init(singleMonitorCapture);
         }
     }
@@ -109,6 +121,24 @@ void ScreenCaptureUtility::ForceNextFrame(const Napi::CallbackInfo &info)
 void ScreenCaptureUtility::SendNextFrameAsIFrame(const Napi::CallbackInfo &info)
 {
     this->_encoder->SendNextFrameAsIFrame();
+}
+
+void ScreenCaptureUtility::SetCRFValue(const Napi::CallbackInfo &info)
+{
+    try
+    {
+        if (info.Length() < 1 || !info[0].IsNumber())
+        {
+            throw "Invalid arguments";
+        }
+        unsigned int crfValue = info[0].As<Napi::Number>().Int32Value();
+        this->_encoder->SetCRFValue(crfValue);
+    }
+    catch (const char *message)
+    {
+        Napi::Error::New(info.Env(), message).ThrowAsJavaScriptException();
+        return;
+    }
 }
 
 ScreenCaptureUtility::~ScreenCaptureUtility()

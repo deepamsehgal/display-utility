@@ -2,7 +2,9 @@
 #define REMOTING_HOST_SCREEN_CAPTURE_UTILITY_H_
 
 #include <napi.h>
-#include "encoder.h"
+#include "base_encoder.h"
+#include "encoder_tty.h"
+#include "encoder_x11.h"
 #include "get_next_frame_worker.h"
 
 namespace remoting
@@ -21,8 +23,9 @@ private:
     void Init(const Napi::CallbackInfo &info);
     void ForceNextFrame(const Napi::CallbackInfo &info);
     void SendNextFrameAsIFrame(const Napi::CallbackInfo &info);
+    void SetCRFValue(const Napi::CallbackInfo &info);
 
-    Encoder *_encoder;
+    BaseEncoder *_encoder;
     GetNextFrameWorker *_worker;
 };
 } // namespace remoting

@@ -1,9 +1,9 @@
 #include "../headers/get_next_frame_worker.h"
-#include "../headers/encoder.h"
+#include "../headers/base_encoder.h"
 
 using namespace remoting;
 
-GetNextFrameWorker::GetNextFrameWorker(Encoder* encoder, Napi::Function& callback)
+GetNextFrameWorker::GetNextFrameWorker(BaseEncoder* encoder, Napi::Function& callback)
     : Napi::AsyncWorker(callback), _encoder(encoder)
 {
 }

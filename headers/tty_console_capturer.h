@@ -18,8 +18,10 @@ public:
 private:
     int _width;
     int _height;
+    int _bytesPerPixel;
     int _frameBufferDescriptor;
     uint8_t* _data_ptr;
+    void resetResources();
 };
 } // namespace remoting
 

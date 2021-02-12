@@ -100,6 +100,11 @@ interface INativeDisplayUtility {
      * Get the position (x-offset and y-offset), height and width of connected monitors
      */
     getAllCurrentResolutionsWithOffset(): IResolutionWithOffset[] | undefined;
+
+    /**
+     * Returns true if the display is accessible else false
+     */
+    isDisplayAvailable(): boolean;
 }
 
 interface ILockUtility {
@@ -137,6 +142,8 @@ interface IScreenCaptureUtility {
      * Force the next frame to be an iframe. Call will also force the next frame and return any waiting getNextFrame callback
      */
     sendNextFrameAsIFrame(): void;
+
+    setCRFValue(crfValue: number): void;
 }
 
 interface IDisplayEventsUtility {
