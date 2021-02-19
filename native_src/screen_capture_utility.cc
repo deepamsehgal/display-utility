@@ -144,9 +144,11 @@ void ScreenCaptureUtility::SetCRFValue(const Napi::CallbackInfo &info)
 
 Napi::Value ScreenCaptureUtility::GetFrameBufferResolution(const Napi::CallbackInfo &info)
 {
-    char resolution[12];
-    strcpy(resolution, this->_encoder->GetCurrentResolution());
-    return Napi::String::New(info.Env(), resolution);
+    char* resolution = this->_encoder->GetCurrentResolution();
+    std::cout << "resolution: " << resolution << std::endl;
+    Napi::String res = Napi::String::New(info.Env(), resolution);
+    delete[] resolution;
+    return res;
 }
 
 ScreenCaptureUtility::~ScreenCaptureUtility()
