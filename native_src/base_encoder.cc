@@ -188,5 +188,12 @@ void BaseEncoder::SetCRFValue(int crfValue)
     }
 }
 
+char* BaseEncoder::GetCurrentResolution()
+{
+    char resolution[12];
+    sprintf(resolution, "%d*%d", _width, _height);
+    return resolution;
+}
+
 BaseEncoder::~BaseEncoder() {}
 } // namespace remoting

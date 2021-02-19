@@ -144,6 +144,8 @@ interface IScreenCaptureUtility {
     sendNextFrameAsIFrame(): void;
 
     setCRFValue(crfValue: number): void;
+
+    getFrameBufferResolution(): string;
 }
 
 interface IDisplayEventsUtility {

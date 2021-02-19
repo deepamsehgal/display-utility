@@ -24,6 +24,7 @@ public:
     void SetCRFValue(int crfValue);
     void SendNextFrameAsIFrame();
     virtual ~BaseEncoder();
+    char* GetCurrentResolution();
 
 protected:
     // Capture properties

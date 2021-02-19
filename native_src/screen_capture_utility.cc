@@ -11,11 +11,12 @@ Napi::Object ScreenCaptureUtility::Init(Napi::Env env, Napi::Object exports)
 {
     Napi::HandleScope scope(env);
     Napi::Function func = DefineClass(env, "ScreenCaptureUtility", {
-        InstanceMethod("init", &ScreenCaptureUtility::Init), 
+        InstanceMethod("init", &ScreenCaptureUtility::Init),
         InstanceMethod("getNextFrame", &ScreenCaptureUtility::GetNextFrame),
         InstanceMethod("forceNextFrame", &ScreenCaptureUtility::ForceNextFrame),
         InstanceMethod("sendNextFrameAsIFrame", &ScreenCaptureUtility::SendNextFrameAsIFrame),
-        InstanceMethod("setCRFValue", &ScreenCaptureUtility::SetCRFValue)
+        InstanceMethod("setCRFValue", &ScreenCaptureUtility::SetCRFValue),
+        InstanceMethod("getFrameBufferResolution", &ScreenCaptureUtility::GetFrameBufferResolution)
     });
 
     constructor = Napi::Persistent(func);
@@ -139,6 +140,13 @@ void ScreenCaptureUtility::SetCRFValue(const Napi::CallbackInfo &info)
         Napi::Error::New(info.Env(), message).ThrowAsJavaScriptException();
         return;
     }
+}
+
+Napi::Value ScreenCaptureUtility::GetFrameBufferResolution(const Napi::CallbackInfo &info)
+{
+    char resolution[12];
+    strcpy(resolution, this->_encoder->GetCurrentResolution());
+    return Napi::String::New(info.Env(), resolution);
 }
 
 ScreenCaptureUtility::~ScreenCaptureUtility()
